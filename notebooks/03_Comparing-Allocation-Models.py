@@ -1,5 +1,4 @@
 # Databricks notebook source
-# MAGIC 
 # MAGIC %md-sandbox
 # MAGIC 
 # MAGIC <div style="text-align: center; line-height: 0; padding-top: 9px;">
@@ -68,6 +67,10 @@ trainDF = spark.table("train")
 
 # COMMAND ----------
 
+!pip install fbprophet
+
+# COMMAND ----------
+
 # TODO
 
 import pandas as pd
@@ -124,14 +127,7 @@ itemAggSchema = """
 """
 
 # get forecast
-def get_forecast_agg_item(keys, grouped_pd):
-  
-  # drop nan records
-  grouped_pd = grouped_pd.dropna()
-  
-  # identify store and item
-  store = keys[0]
-  days_to_forecast = keys[1]
+def get_forecast_agg_item(grouped_pd, days_to_forecast = 30):
   
   # configure model
   model = Prophet(
@@ -144,7 +140,7 @@ def get_forecast_agg_item(keys, grouped_pd):
     )
   
   # train model
-  model.fit( grouped_pd.rename(columns={'date':'ds', 'sales':'y'})[['ds','y']]  )
+  model.fit(grouped_pd.rename(columns={'date':'ds', 'sales':'y'})[['ds','y']])
   
   # make forecast
   future_item_pd = model.make_future_dataframe(
@@ -173,7 +169,7 @@ def get_forecast_agg_item(keys, grouped_pd):
 
 agg_history_pd = (
   trainDF
-  .groupBy('item','date')
+  .groupBy('item','date', 'store')
   .agg(F.sum('sales').alias('sales'))
   .toPandas()
   )
@@ -193,12 +189,10 @@ for i, item_ in enumerate(items):
   item = item_['item']
   
   # extract item subset
-  item_history_pd = agg_history_pd[ 
-    (agg_history_pd['item']==item) 
-    ].dropna()
+  item_history_pd = agg_history_pd[agg_history_pd['item']==item]
   
   # generate forecast
-  item_forecast_pd = get_forecast_agg_item(item_history_pd, days_to_forecast=30)
+  item_forecast_pd = get_forecast_agg_item(item_history_pd, days_to_forecast = 30)
   
   # concatonate forecasts to build a single resultset 
   if i>0:
