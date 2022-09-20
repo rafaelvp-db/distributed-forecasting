@@ -1,1 +1,7 @@
 .DS_Store
+.egg
+.whl
+__pycache__
+.venv
+venv
+.env
