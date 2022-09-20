@@ -1,5 +1,4 @@
 # Databricks notebook source
-# MAGIC 
 # MAGIC %md-sandbox
 # MAGIC 
 # MAGIC <div style="text-align: center; line-height: 0; padding-top: 9px;">
@@ -43,24 +42,19 @@
 
 # COMMAND ----------
 
-# TODO
-rawDataPath = "/FileStore/tables/demand/train.csv"
-
-# COMMAND ----------
-
-spark.read.csv("/FileStore/tables/demand/train.csv").count()
-
-# COMMAND ----------
-
-spark.conf.set("spark.sql.adaptive.enabled", True)
-
-# COMMAND ----------
-
-spark.read.csv("/FileStore/tables/demand/train.csv").count()
-
-# COMMAND ----------
-
+rawDataPath = "/FileStore/tables/sales/train.csv"
 dbutils.fs.ls(rawDataPath)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### Having a glance at our input data
+
+# COMMAND ----------
+
+data_count = spark.read.csv("/FileStore/tables/sales/train.csv").count()
+print(f"Dataset has {data_count} records")
 
 # COMMAND ----------
 
@@ -91,7 +85,6 @@ dbutils.fs.ls(rawDataPath)
 
 # COMMAND ----------
 
-# TODO
 rawSchema = """
   date DATE,
   store INT,
@@ -142,8 +135,8 @@ display(rawDF.select(F.max("date")))
 
 # TODO
 
-trainDF = rawDF.filter(F.col("date") < "2017-12-01")
-testDF = rawDF.where(F.col("date") >= "2017-12-01")
+trainDF = rawDF.filter(F.col("date") < "2016-12-01")
+testDF = rawDF.where(F.col("date") >= "2016-12-01")
 
 print(f"Our training set represents {trainDF.count() / rawDF.count() * 100:.2f}% of the total data")
 
@@ -163,16 +156,6 @@ path_train = userhome + "/demand/train"
 
 tableName_test = "test"
 path_test = userhome + "/demand/test"
-
-# COMMAND ----------
-
-schema = "ssn string, celery integer"
-data_dir = "dbfs:/databricks-datasets/learning-spark-v2/people/people-10m.parquet/"
-budgetDF2 = spark.read.schema(schema).parquet(data_dir).select("ssn", "celery").where("celery < 50000").orderBy("celery")
-
-# COMMAND ----------
-
-budgetDF2 = spark.read.parquet(data_dir)
 
 # COMMAND ----------
 
@@ -399,3 +382,7 @@ monthlyItemSales(dbutils.widgets.get("sku"))
 # MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="http://www.apache.org/">Apache Software Foundation</a>.<br/>
 # MAGIC <br/>
 # MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="http://help.databricks.com/">Support</a>
+
+# COMMAND ----------
+
+
