@@ -306,7 +306,7 @@ display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper'
 # MAGIC   store,
 # MAGIC   date,
 # MAGIC   forecast
-# MAGIC FROM allocated_forecasts
+# MAGIC FROM hackathon.sales.allocated_forecasts
 # MAGIC WHERE item = 1 AND 
 # MAGIC       date >= '2018-01-01' AND 
 # MAGIC       training_date=current_date()
@@ -321,7 +321,7 @@ display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper'
 # MAGIC   store,
 # MAGIC   date,
 # MAGIC   forecast
-# MAGIC FROM finegrain_forecasts a
+# MAGIC FROM hackathon.sales.finegrain_forecasts a
 # MAGIC WHERE item = 1 AND
 # MAGIC       date >= '2018-01-01' AND
 # MAGIC       training_date=current_date()
