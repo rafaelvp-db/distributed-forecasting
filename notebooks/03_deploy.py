@@ -17,23 +17,45 @@ filtered_runs.loc[:, ["run_id", "tags.mlflow.runName"]]
 
 # COMMAND ----------
 
-import pandas as pd
-import time
+def forecast_store_item( history_pd: pd.DataFrame ) -> pd.DataFrame:
+  
+  # fetch the model for the particular store/item combination
+  model = mlflow.
+  #predict forecast for the next days
+  forecast_pd = make_prediction(model)
+  # --------------------------------------
+  
+  # ASSEMBLE EXPECTED RESULT SET
+  # --------------------------------------
+  # get relevant fields from forecast
+  forecast_pd['y'] = history_pd['y']
+  # get store & item from incoming data set
+  forecast_pd['store'] = history_pd['store'].iloc[0]
+  forecast_pd['item'] = history_pd['item'].iloc[0]
+  # --------------------------------------
+  
+  # return expected dataset
+  return forecast_pd[['ds', 'store', 'item', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
 
-def register_models(df_runs: pd.DataFrame):
+# generate forecast
+results = (
+  store_item_history
+    .groupBy('store', 'item')
+      .applyInPandas(forecast_store_item, schema="ds date, store int, item int, y float, yhat float, yhat_upper float, yhat_lower float")
+    .withColumn('training_date', f.current_date() )
+    .withColumnRenamed('ds','date')
+    .withColumnRenamed('y','sales')
+    .withColumnRenamed('yhat','forecast')
+    .withColumnRenamed('yhat_upper','forecast_upper')
+    .withColumnRenamed('yhat_lower','forecast_lower'))
 
-  for _, row in df_runs.iterrows():
-    time.sleep(0.2) #gently target the API
-    run = mlflow.get_run(row["run_id"])
 
-    time.sleep(0.2) #gently target the API
-    mlflow.register_model(
-      model_uri = f"runs:/{run.info.run_id}/model",
-      name = f"model_{row['tags.mlflow.runName']}",
-      await_registration_for=5
-    )
-    
-register_models(filtered_runs)
+(results
+    .write
+    .mode('overwrite')
+    .saveAsTable('hackathon.sales.finegrain_forecasts'))
+
+display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper','forecast_lower'))
 
 # COMMAND ----------
 
