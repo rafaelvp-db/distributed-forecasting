@@ -1,26 +1,109 @@
+import logging
 import mlflow.pyfunc
+import mlflow
+import pandas as pd
+from pathlib import Path
+from prophet import Prophet
+import time
 
+logger = logging.getLogger(name = __name__)
 
-class ForecastingModelWrapper(mlflow.pyfunc.PythonModel):
+class ForecastStoreItemModel(mlflow.pyfunc.PythonModel):
+  """
+  Class to train and use our Forecasting Models for Store/Item combinations
+  """
+    
+  def __init__(
+    self,
+    experiment_id,
+    model_path = "model",
+    dst_path = "/dbfs/tmp/forecast/model",
+    time_between_calls: int = 3
+  ):
+    """Will load all store/item logged models from the specified experiment_id"""
+
+    experiment = mlflow.get_experiment(experiment_id)
+    runs = mlflow.search_runs(experiment_ids = [experiment_id])
+    self._filtered_runs = runs[runs["tags.mlflow.runName"].str.match(r"(run_item_[0-9]+_store_[0-9]+)")]
+    self._model_path = model_path
+    self._model_paths = {}
+    self._dst_path = dst_path
+    self._time_between_calls = time_between_calls
+
+  def load_context(self, context):
+    """This method is called when loading an MLflow model with pyfunc.load_model(), as soon as the Python Model is constructed.
+    Args:
+        context: MLflow context where the model artifact is stored.
     """
-    Class to train and use our Forecasting Models
+
+    logger.info("Loading context for Forecasting Model...")
+
+      
+  def make_prediction(
+    self,
+    model: Prophet,
+    periods = 90,
+    freq = 'd',
+    include_history = True
+  ) -> pd.DataFrame:
+    
+    future_pd = model.make_future_dataframe(
+      periods=periods,
+      freq=freq,
+      include_history=include_history)
+
+    return model.predict(future_pd)
+
+  def predict(self, context, model_input: pd.DataFrame) -> pd.DataFrame:
+    """This is an abstract function.
+    Args:
+        model_input: input dataframe containing sales data.
+    Returns:
+        model_output: dataframe containing forecast columns.
     """
+    
+    # Try loading model from DBFS, if it's not there, 
+    # fetch from MLflow
+    
+    model = None
+    store = model_input["store"].iloc[0]
+    item = model_input["item"].iloc[0]
+    run_name = f"run_item_{item}_store_{store}"
+    run_id = self._filtered_runs.loc[self._filtered_runs["run_name"] == run_name, "run_id"]
+    final_dst_path = f"{self._dst_path}/{run_name}"
+    
+    if Path(final_dst_path).exists():
+      logger.info(f"Using cached model from {final_dst_path}")
+      model = mlflow.prophet.load_model(
+        model_uri = self._model_paths[run_name]
+      )
+    else:
+      logger.info(f"{final_dst_path} doesn't exist, fecthing from Mlflow...")
+      time.sleep(self._time_between_calls)
+      Path(final_dst_path).mkdir(parents=True, exist_ok=True)
+      model = mlflow.prophet.load_model(
+        model_uri = f"runs:/{run_id}/{self._model_path}",
+        dst_path = final_dst_path
+      )
+    
+    store = model_input["store"].iloc[0]
+    item = store = model_input["item"].iloc[0]
+    
+    #predict forecast for the next days
+    model_output = make_prediction(model)
+    # --------------------------------------
 
-    def load_context(self, context):
-        """This method is called when loading an MLflow model with pyfunc.load_model(), as soon as the Python Model is constructed.
-        Args:
-            context: MLflow context where the model artifact is stored.
-        """
+    # ASSEMBLE EXPECTED RESULT SET
+    # --------------------------------------
+    # get relevant fields from forecast
+    model_output['y'] = model_input['y']
+    # get store & item from incoming data set
+    model_output['store'] = store
+    model_output['item'] = item
+    # --------------------------------------
 
-        #TODO: code to load the models for each store/item combination
-        #self.model = 
-
-    def predict(self, context, model_input):
-        """This is an abstract function.
-        Args:
-            context ([type]): MLflow context where the model artifact is stored.
-            model_input ([type]): the input data to fit into the model.
-        Returns:
-            [type]: the loaded model artifact.
-        """
-        return self.model
+    # return expected dataset
+    return model_output[['ds', 'store', 'item', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
+    
+    
+      

@@ -1,61 +1,31 @@
 # Databricks notebook source
 import mlflow
 
-# COMMAND ----------
-
 experiment_id = "8ec4b771e8254f128678a40b5bc63b83"
 experiment = mlflow.get_experiment(experiment_id)
-runs = mlflow.search_runs(experiment_ids = [experiment_id])
+runs = mlflow.search_runs(experiment_ids = [experiment_id], filter_string = "status = 'FINISHED'")
 
-runs
+runs.head()
 
 # COMMAND ----------
 
 # DBTITLE 1,Filtering only granular forecasting model runs
 filtered_runs = runs[runs["tags.mlflow.runName"].str.match(r"(run_item_[0-9]+_store_[0-9]+)")]
-filtered_runs.loc[:, ["run_id", "tags.mlflow.runName"]]
+filtered_runs.loc[:, ["run_id", "tags.mlflow.runName"]].sample(5)
 
 # COMMAND ----------
 
-def forecast_store_item( history_pd: pd.DataFrame ) -> pd.DataFrame:
+# DBTITLE 1,Logging our model as a Custom PyFunc Model
+from model_wrapper import ForecastStoreItemModel
+
+with mlflow.start_run(run_name = "store_item_udf") as run:
   
-  # fetch the model for the particular store/item combination
-  model = mlflow.
-  #predict forecast for the next days
-  forecast_pd = make_prediction(model)
-  # --------------------------------------
-  
-  # ASSEMBLE EXPECTED RESULT SET
-  # --------------------------------------
-  # get relevant fields from forecast
-  forecast_pd['y'] = history_pd['y']
-  # get store & item from incoming data set
-  forecast_pd['store'] = history_pd['store'].iloc[0]
-  forecast_pd['item'] = history_pd['item'].iloc[0]
-  # --------------------------------------
-  
-  # return expected dataset
-  return forecast_pd[['ds', 'store', 'item', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
-
-# generate forecast
-results = (
-  store_item_history
-    .groupBy('store', 'item')
-      .applyInPandas(forecast_store_item, schema="ds date, store int, item int, y float, yhat float, yhat_upper float, yhat_lower float")
-    .withColumn('training_date', f.current_date() )
-    .withColumnRenamed('ds','date')
-    .withColumnRenamed('y','sales')
-    .withColumnRenamed('yhat','forecast')
-    .withColumnRenamed('yhat_upper','forecast_upper')
-    .withColumnRenamed('yhat_lower','forecast_lower'))
-
-
-(results
-    .write
-    .mode('overwrite')
-    .saveAsTable('hackathon.sales.finegrain_forecasts'))
-
-display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper','forecast_lower'))
+  mlflow.pyfunc.log_model(
+    artifact_path = "model",
+    code_path = ["model_wrapper.py"],
+    python_model = ForecastStoreItemModel(experiment_id),
+    pip_requirements = ["fbprophet"]
+  )
 
 # COMMAND ----------
 
