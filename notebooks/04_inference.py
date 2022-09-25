@@ -9,7 +9,6 @@ def predict_udf(history_pd: pd.DataFrame) -> pd.DataFrame:
   
   model_name = "ForecastingModelUDF"
   registered_model = client.get_registered_model(model_name)
-  print(registered_model)
   run_id = registered_model.latest_versions[0].run_id
   model = mlflow.pyfunc.load_model(model_uri = f"runs:/{run_id}/model")
   
@@ -61,3 +60,17 @@ spark.sql("drop table if exists hackathon.sales.test_finegrain_forecasts")
     .saveAsTable('hackathon.sales.test_finegrain_forecasts'))
 
 display(spark.table('hackathon.sales.test_finegrain_forecasts').drop('forecast_upper','forecast_lower'))
+
+# COMMAND ----------
+
+import mlflow
+from mlflow.tracking.client import MlflowClient
+client = MlflowClient()
+
+model_name = "ForecastingModelUDF"
+registered_model = client.get_registered_model(model_name)
+client.transition_model_version_stage(
+  name = model_name,
+  version = registered_model.latest_versions[0].version,
+  stage = "Staging"
+)
