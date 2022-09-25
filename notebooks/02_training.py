@@ -15,6 +15,10 @@
 
 # COMMAND ----------
 
+# MAGIC %fs ls /mnt/field-demos/retail/fgforecast/
+
+# COMMAND ----------
+
 # DBTITLE 1,Install Required Libraries
 !pip install --upgrade pip && pip install fbprophet
 
