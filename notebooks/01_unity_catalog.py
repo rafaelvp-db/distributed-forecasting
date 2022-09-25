@@ -1,4 +1,8 @@
 # Databricks notebook source
+spark.sql("SHOW CATALOGS").filter("catalog = 'hackathon'").count()
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC 
 # MAGIC --- create a new catalog
