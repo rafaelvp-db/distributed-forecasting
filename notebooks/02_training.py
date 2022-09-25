@@ -28,8 +28,7 @@
 
 # DBTITLE 1,Review Raw Data
 # read the training file into a dataframe
-spark.sql("CREATE DATABASE IF NOT EXISTS rvp_forecasting")
-spark.sql("DROP TABLE IF EXISTS rvp_forecasting.sales_raw")
+spark.sql("DROP TABLE IF EXISTS hackathon.sales.raw")
 
 sales = spark.read.csv(
   '/mnt/field-demos/retail/fgforecast/train.csv',
@@ -121,9 +120,11 @@ display(spark.read.table("hackathon.sales.raw"))
 # COMMAND ----------
 
 # DBTITLE 1,Generate Allocated Forecasts (Aggregated Stores)
+import json
 import mlflow
 import pandas as pd
-from prophet import Prophet
+from prophet import Prophet, serialize
+from prophet.diagnostics import cross_validation, performance_metrics
 from pyspark.sql import functions as f
 
 # NOTE 
@@ -134,6 +135,16 @@ from pyspark.sql import functions as f
 # allocated forecast today.
 # ==================================================================================================================
 
+experiment_name = "/Users/rafael.pierre@databricks.com/sales_forecast"
+experiment_id = ""
+if not mlflow.get_experiment_by_name(experiment_name):
+  experiment_id = mlflow.create_experiment(name = experiment_name)
+else:
+  experiment = mlflow.set_experiment(experiment_name = experiment_name)
+  experiment_id = experiment.experiment_id
+
+def extract_params(pr_model):
+  return {attr: getattr(pr_model, attr) for attr in serialize.SIMPLE_ATTRIBUTES}
 
 #train the model using fbProphet
 def train_model(history_pd: pd.DataFrame, store: int = None) -> Prophet:
@@ -144,8 +155,10 @@ def train_model(history_pd: pd.DataFrame, store: int = None) -> Prophet:
   if not store:
     store = "all"
   
+  min_date = str(history_pd.ds.min())
+  max_date = str(history_pd.ds.max())
   run_name = f"run_item_{item}_store_{store}"
-  with mlflow.start_run(run_name = run_name, nested = True) as run:
+  with mlflow.start_run(experiment_id = experiment_id, run_name = run_name) as run:
     model = Prophet(
       interval_width=0.95,
       growth='linear',
@@ -153,11 +166,30 @@ def train_model(history_pd: pd.DataFrame, store: int = None) -> Prophet:
       weekly_seasonality=True,
       yearly_seasonality=True,
       seasonality_mode='multiplicative'
-      )
+    )
 
     # train the model
     model.fit( history_pd )
-    mlflow.register_model()
+    
+    # get params
+    params = extract_params(model)
+    
+    # calculate metrics
+    metric_keys = ["mse", "mae", "mape"]
+    metrics_raw = cross_validation(
+        model=model,
+        horizon="90 days",
+        period="360 days",
+        initial = "730 days",
+        disable_tqdm=True,
+        parallel = "processes"
+    )
+    cv_metrics = performance_metrics(metrics_raw)
+    metrics = {k: cv_metrics[k].mean() for k in metric_keys}
+    
+    # log metrics, params and model
+    mlflow.log_params(params)
+    mlflow.log_metrics(metrics)
     mlflow.prophet.log_model(
       pr_model = model,
       artifact_path = "model"
@@ -170,7 +202,7 @@ def make_prediction(model: Prophet) -> pd.DataFrame:
   future_pd = model.make_future_dataframe(periods=90, 
                                           freq='d', 
                                           include_history=True)
-  return model.predict( future_pd )  
+  return model.predict(future_pd)  
 
   
 def forecast_item(history_pd: pd.DataFrame) -> pd.DataFrame:
@@ -214,10 +246,12 @@ results = (
     .withColumn('yhat',f.expr('yhat * ratio'))
     .selectExpr('ds as date','store','item','y as sales', 'yhat as forecast', 'training_date'))
 
+
 (results
     .write
     .mode('overwrite')
-    .saveAsTable('hackathon.sales.allocated_forecasts'))
+    .saveAsTable('hackathon.sales.allocated_forecasts', mode = "overwrite")
+)
 
 display(spark.table('hackathon.sales.allocated_forecasts'))
 
@@ -302,10 +336,7 @@ display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper'
 # DBTITLE 1,Visualize Allocated Forecasts for Item 1 at Each Store
 # MAGIC %sql
 # MAGIC 
-# MAGIC SELECT 
-# MAGIC   store,
-# MAGIC   date,
-# MAGIC   forecast
+# MAGIC SELECT *
 # MAGIC FROM hackathon.sales.allocated_forecasts
 # MAGIC WHERE item = 1 AND 
 # MAGIC       date >= '2018-01-01' AND 
@@ -317,10 +348,7 @@ display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper'
 # DBTITLE 1,Visualize Fine Grained Forecasts for Item 1 at Each Store
 # MAGIC %sql
 # MAGIC 
-# MAGIC SELECT
-# MAGIC   store,
-# MAGIC   date,
-# MAGIC   forecast
+# MAGIC SELECT *
 # MAGIC FROM hackathon.sales.finegrain_forecasts a
 # MAGIC WHERE item = 1 AND
 # MAGIC       date >= '2018-01-01' AND

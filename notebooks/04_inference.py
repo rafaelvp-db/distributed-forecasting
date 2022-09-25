@@ -16,6 +16,10 @@ pyfunc_udf = mlflow.pyfunc.load_model(model_uri = f"runs:/{run_id}/model")
 
 # COMMAND ----------
 
+pyfunc_udf.metadata.get_model_info()
+
+# COMMAND ----------
+
 # retrieve historical data
 store_item_history = (
   spark.sql('''SELECT store, item, CAST(date as date) as ds, SUM(sales) as y FROM hackathon.sales.allocated_forecasts
@@ -23,19 +27,13 @@ store_item_history = (
               ORDER BY store, item, ds'''))
 
 # generate forecast
-results = (
-  store_item_history
-    .groupBy('store', 'item')
-      .applyInPandas(pyfunc_udf.predict, schema="ds date, store int, item int, y float, yhat float, yhat_upper float, yhat_lower float")
-    .withColumnRenamed('ds','date')
-    .withColumnRenamed('y','sales')
-    .withColumnRenamed('yhat','forecast')
-    .withColumnRenamed('yhat_upper','forecast_upper')
-    .withColumnRenamed('yhat_lower','forecast_lower'))
+results = pyfunc_udf.predict(model_input = store_item_history)
 
 # COMMAND ----------
 
-display(results)
+grouped_df = store_item_history.groupBy('store', 'item')
+  
+grouped_df.apply
 
 # COMMAND ----------
 
