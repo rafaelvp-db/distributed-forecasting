@@ -4,8 +4,8 @@
             "profile": "DEFAULT",
             "storage_type": "mlflow",
             "properties": {
-                "workspace_directory": "/Shared/dbx/rfc_forecasting",
-                "artifact_location": "dbfs:/Shared/dbx/projects/rfc_forecasting"
+                "workspace_directory": "/Shared/dbx/projects/rfc-hackathon",
+                "artifact_location": "dbfs:/dbx/rfc-hackathon"
             }
         }
     },

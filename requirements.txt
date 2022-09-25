@@ -1,6 +1,9 @@
+wheel
 dbx
-pystan
-fbprophet
+pystan==2.19.1.1
+fbprophet==0.7.1
 pandas
-pyspark
+pyspark==3.2.1
+delta-spark==1.2.1
 mlflow
+pytest

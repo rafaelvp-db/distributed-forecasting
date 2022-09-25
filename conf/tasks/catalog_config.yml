@@ -1,0 +1,3 @@
+output:
+  catalog_name: "hackathon"
+  schema_name: "sales"
