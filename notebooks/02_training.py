@@ -8,11 +8,6 @@
 
 # COMMAND ----------
 
-spark.conf.set("spark.databricks.optimizer.adaptive.enabled", "false")
-spark.conf.set("spark.default.parallelism", "10")
-
-# COMMAND ----------
-
 # MAGIC %fs ls /mnt/field-demos/retail/fgforecast/
 
 # COMMAND ----------
@@ -128,6 +123,9 @@ import pandas as pd
 from prophet import Prophet, serialize
 from prophet.diagnostics import cross_validation, performance_metrics
 from pyspark.sql import functions as f
+
+spark.conf.set("spark.databricks.optimizer.adaptive.enabled", "false")
+spark.conf.set("spark.default.parallelism", "10")
 
 # NOTE 
 # ==================================================================================================================
@@ -385,7 +383,3 @@ display(spark.table('hackathon.sales.finegrain_forecasts').drop('forecast_upper'
 
 # MAGIC %md 
 # MAGIC <img src='https://brysmiwasb.blob.core.windows.net/demos/images/forecasting_excel_2.PNG' width=800>
-
-# COMMAND ----------
-
-
