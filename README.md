@@ -1,8 +1,24 @@
-# rfc-forecasting
+# Distributed Forecasting with Prophet, Spark, Delta & MLflow
 
-This is a sample project for Databricks, generated via cookiecutter.
+<img src = "https://raw.githubusercontent.com/rafaelvp-db/distributed-forecasting/master/img/disttributed_forecasting1.png" />
 
-While using this project, you need Python 3.X and `pip` or `conda` for package management.
+### Context
+
+* This project contains code for training, tracking and deploying a **distributed sales forecasting model**, using **Prophet, Spark, Delta & MLflow**.
+
+* It also features distributed inference of previously trained models using **Spark and Pandas UDFs**.
+
+* **Fine-grained** forecasting models are trained for multiple **store** and **product** combinations. For this example, we train more than 500 different models, while tracking each of the training runs as well as the resulting validation metrics into MLflow.
+
+* Finally, a **custom PyFunc** model is created, allowing users to seamlessly run distributed inference in order to obtain fine-grained forecasting at scale leveraging the models that were trained and registered in MLflow in the previous step.
+
+## High Level Architecture
+
+<img src="https://raw.githubusercontent.com/rafaelvp-db/distributed-forecasting/master/img/dist_forecasting2.png" />
+
+# DBX Instructions
+
+Note: DBX support is still in progress.
 
 ## Local environment setup
 
@@ -99,3 +115,9 @@ Please set the following secrets or environment variables for your CI provider:
 git tag -a v<your-project-version> -m "Release tag for version <your-project-version>"
 git push origin --tags
 ```
+
+# Credits
+
+* Bryan Smith
+* Rob Saker
+* Rafael Pierre
