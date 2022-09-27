@@ -118,6 +118,6 @@ git push origin --tags
 
 # Credits
 
-* Bryan Smith
+* [Bryan Smith](https://github.com/bryansmith-db)
 * Rob Saker
-* Rafael Pierre
+* [Rafael Pierre](https://github.com/rafaelvp-db)
