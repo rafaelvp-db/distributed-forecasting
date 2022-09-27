@@ -135,7 +135,7 @@ spark.conf.set("spark.default.parallelism", "10")
 # allocated forecast today.
 # ==================================================================================================================
 
-experiment_name = "/Users/rafael.pierre@databricks.com/sales_forecast"
+experiment_name = "/Users/YOUR_USER/sales_forecast"
 experiment_id = ""
 if not mlflow.get_experiment_by_name(experiment_name):
   experiment_id = mlflow.create_experiment(name = experiment_name)

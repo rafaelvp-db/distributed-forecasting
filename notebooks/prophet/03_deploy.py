@@ -4,12 +4,12 @@ import mlflow
 from model_wrapper import ForecastStoreItemModel
 
 # Experiment containing our Prophet runs
-source_experiment_name = "/Users/rafael.pierre@databricks.com/sales_forecast"
+source_experiment_name = "/Users/YOUR_USER/sales_forecast"
 source_experiment = mlflow.get_experiment_by_name(source_experiment_name)
 source_experiment_id = source_experiment.experiment_id
 
 # Experiment for PyFunc Model that will be used as UDF
-udf_experiment_name = "/Users/rafael.pierre@databricks.com/sales_forecast_udf"
+udf_experiment_name = "/Users/YOUR_USER/sales_forecast_udf"
 if not mlflow.get_experiment_by_name(udf_experiment_name):
   mlflow.create_experiment(udf_experiment_name)
 experiment = mlflow.get_experiment_by_name(udf_experiment_name)
